@@ -402,7 +402,22 @@ ${JSON.stringify(tables, null, 2)}
   .catch(error => {
     console.error("Erreur lors de la récupération des tables :", error);
   });
-
+(async () => {
+  for (const tableId of [
+    "REF_categories",
+    "REF_sous_categories",
+    "REF_missions_fondatrices"
+  ]) {
+    try {
+      const data = await grist.docApi.fetchTable(tableId);
+      console.log("TABLE :", tableId);
+      console.log("COLONNES :", Object.keys(data));
+      console.log("PREMIERE LIGNE :", data);
+    } catch (e) {
+      console.error("ERREUR", tableId, e);
+    }
+  }
+})();
 grist.onRecord(async (record) => {
   try {
     hideNotice();
