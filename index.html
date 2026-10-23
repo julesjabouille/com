@@ -386,6 +386,35 @@ $("reloadButton").addEventListener("click", () => {
 });
 
 grist.ready({ requiredAccess: "full" });
+  // DIAGNOSTIC TEMPORAIRE : afficher les identifiants des tables
+grist.docApi.listTables()
+  .then(tables => {
+    console.log("Tables disponibles dans Grist :", tables);
+
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<pre style="background:#fff;padding:12px;border:1px solid #ccc;white-space:pre-wrap;">
+Tables disponibles :
+${JSON.stringify(tables, null, 2)}
+</pre>`
+    );
+  })
+  .catch(error => {
+    console.error("Erreur lors de la récupération des tables :", error);
+  });
+
+grist.onRecord(async (record) => {
+  try {
+    hideNotice();
+    await loadReferenceTables();
+    renderRecord(record);
+  } catch (error) {
+    console.error(error);
+    showNotice(
+      `Impossible de charger les tables de référence. Vérifiez les noms des tables et l’accès complet au document. Détail : ${error.message || error}`
+    );
+  }
+});
 grist.onRecord(async (record) => {
   try {
     hideNotice();
