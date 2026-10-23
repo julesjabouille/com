@@ -359,22 +359,30 @@ async function saveRecord(event) {
   saveButton.disabled = true;
   setStatus("Enregistrement…");
   try {
-    const update = { id: currentRowId };
-    update[CFG.columns.title] = $("titleInput").value;
-    update[CFG.columns.categories] = encodeRefList(selected.categories);
-    update[CFG.columns.subcategories] = encodeRefList(selected.subcategories);
-    update[CFG.columns.missions] = encodeRefList(selected.missions);
-    update[CFG.columns.deadline] = dateForGrist($("deadlineInput").value);
-    await grist.getTable(CFG.mainTable).update([update]);
-    dirty = false;
-    setStatus("Modifications enregistrées dans Grist.");
-  } catch (error) {
-    console.error(error);
-    setStatus(`Échec de l’enregistrement : ${error.message || error}`, true);
-    saveButton.disabled = false;
-  } finally {
-    saveInProgress = false;
-  }
+  const update = { id: currentRowId };
+
+  update[CFG.columns.title] = $("titleInput").value;
+  update[CFG.columns.categories] = encodeRefList(selected.categories);
+  update[CFG.columns.subcategories] = encodeRefList(selected.subcategories);
+  update[CFG.columns.missions] = encodeRefList(selected.missions);
+  update[CFG.columns.deadline] = dateForGrist($("deadlineInput").value);
+
+  console.log("TABLE :", CFG.mainTable);
+  console.log("UPDATE ENVOYÉ À GRIST :", update);
+
+  const table = await grist.getTable(CFG.mainTable);
+  console.log("TABLE GRIST :", table);
+
+  await table.update([update]);
+
+  console.log("ÉCRITURE OK");
+
+  dirty = false;
+  setStatus("Modifications enregistrées dans Grist.");
+} catch (error) {
+  console.error("ERREUR ENREGISTREMENT :", error);
+  setStatus(`Échec de l’enregistrement : ${error.message || error}`, true);
+  saveButton.disabled = false;
 }
 
 $("titleInput").addEventListener("input", setDirty);
