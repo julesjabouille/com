@@ -177,13 +177,15 @@ function afficher(rec) {
     montrer('vide');
     return;
   }
-  enregistrement = rec;
-  if (!('titre' in rec)) {
+  // Grist renvoie les noms de colonnes de la table : on les remappe vers les noms du widget.
+  const mappe = grist.mapColumnNames(rec);
+  enregistrement = mappe;
+  if (!('titre' in mappe)) {
     montrer('config');
     return;
   }
   montrer('application');
-  remplir(rec);
+  remplir(mappe);
 }
 
 function remplir(rec) {
