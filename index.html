@@ -38,9 +38,14 @@
     }
     .entete-gauche { flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 0.9rem; }
     .entete-gauche h1 { margin: 0; overflow-wrap: anywhere; }
-    .rubriques { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
-    .rubriques .separateur { color: var(--text-mention-grey); font-weight: 700; }
-    .rubriques-edition { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0 1rem; }
+    .rubriques { display: flex; flex-direction: column; gap: 0.5rem; }
+    .rubrique { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.75rem; }
+    .rubrique-libelle {
+      flex: 0 0 9.5rem; font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-mention-grey);
+    }
+    .rubriques-edition { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0 1rem; align-items: start; }
+    .entete .champ-multiple { margin-bottom: 0; }
 
     .entete-droite { flex: 0 1 290px; display: flex; flex-direction: column; align-items: flex-end; gap: 1rem; text-align: right; }
     .entete-droite.edition { align-items: stretch; text-align: left; }
