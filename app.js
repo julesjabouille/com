@@ -23,6 +23,23 @@ const STATUTS = {
 };
 const STATUTS_CLOS = ['Terminé', 'Annulé'];
 
+// Compare les statuts sans tenir compte de la casse, des accents ni des espaces
+// (« Termine », « annulé », « En attente  » sont reconnus).
+const normaliserStatut = (valeur) => String(valeur ?? '').trim().toLowerCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// Nom officiel du statut ('' si la valeur n'est pas reconnue).
+function statutOfficiel(valeur) {
+  const cible = normaliserStatut(valeur);
+  return Object.keys(STATUTS).find((nom) => normaliserStatut(nom) === cible) || '';
+}
+
+// Types de retombées proposés en suggestion (d'autres types peuvent être saisis).
+const TYPES_RETOMBEES = [
+  'Article de presse', 'Communiqué de presse', 'Radio', 'Télévision',
+  'Podcast', 'Vidéo', 'Réseaux sociaux', 'Blog / site web',
+];
+
 // Colonnes de type référence (Ref ou RefList).
 const COLONNES_REFERENCES = [
   'categorie',
@@ -43,22 +60,25 @@ const COLONNES = [
   { name: 'categorie', title: 'Catégorie(s)', type: 'Any', optional: true },
   { name: 'sous_categorie', title: 'Sous-catégorie(s)', type: 'Any', optional: true },
   { name: 'descriptif', title: 'Descriptif du projet', type: 'Text', optional: true },
-  { name: 'missions_fondatrices_rattachees', title: 'Missions fondatrices rattachées', type: 'Any', optional: true },
+  { name: 'missions_fondatrices_rattachees', title: 'Mission(s) fondatrice(s) rattachée(s)', type: 'Any', optional: true },
   { name: 'echeance', title: 'Échéance', type: 'Date', optional: true },
-  { name: 'statut', title: 'Statut', type: 'Choice', optional: true },
+  { name: 'statut', title: 'Statut', type: 'Any', optional: true },
   { name: 'agents_ariane', title: 'Agents ARIANE concernés', type: 'Any', optional: true },
   { name: 'autres_agents', title: 'Autres agents concernés', type: 'Text', optional: true },
   { name: 'autres_interlocuteurs', title: 'Autres interlocuteurs concernés', type: 'Text', optional: true },
   { name: 'lien_ressource', title: 'Lien ressource', type: 'Text', optional: true },
   { name: 'lien_article_presse', title: "Lien vers l'article de presse", type: 'Text', optional: true },
   { name: 'etapes', title: 'Étapes (JSON)', type: 'Text', optional: true },
+  { name: 'retombee', title: 'Retombées médiatiques (JSON)', type: 'Text', optional: true },
+  { name: 'maj_temp', title: 'Dernière édition (date)', type: 'Any', optional: true },
+  { name: 'maj_par', title: 'Dernière édition (auteur)', type: 'Any', optional: true },
 ];
 
 // Champs modifiables en mode édition (titre et échéance restent en lecture seule).
 const CHAMPS_EDITABLES = [
   'statut', 'responsable', 'categorie', 'sous_categorie',
   'missions_fondatrices_rattachees', 'agents_ariane', 'descriptif',
-  'autres_agents', 'autres_interlocuteurs', 'lien_ressource', 'lien_article_presse', 'etapes',
+  'autres_agents', 'autres_interlocuteurs', 'lien_ressource', 'lien_article_presse', 'etapes', 'retombee',
 ];
 
 // ---------------------------------------------------------------------------
@@ -77,6 +97,8 @@ let erreurStructure = null;
 let signatureStructure = null;
 let promesseStructure = null;
 let chargementDonnees = null;
+let donneesChargees = false;     // les tables liées ont été lues au moins une fois
+let manquantsTentes = '';        // références introuvables déjà signalées (évite de recharger en boucle)
 let rechargeDemandee = false;
 
 let enEdition = false;
@@ -84,6 +106,7 @@ let enregistrementEnCours = false;
 let brouillon = null;           // valeurs en cours d'édition
 let original = null;            // valeurs de la ligne au dernier synchronisme
 let etapesValides = true;       // false si la colonne etapes n'est pas un tableau JSON
+let retombeesValides = true;    // idem pour la colonne retombee
 let jeton = 0;                  // ignore les réponses asynchrones périmées
 
 let derniereSignature = null;   // évite de reconstruire la page si rien n'a changé
@@ -297,6 +320,7 @@ async function chargerDonnees() {
       afficherErreur(`Impossible de lire la table « ${tableId} » : ${err.message || err}`);
     }
   }));
+  donneesChargees = true;
   versionDonnees += 1;
 }
 
@@ -315,15 +339,39 @@ function chargerDonneesGroupe() {
   return chargementDonnees;
 }
 
+// Références (catégorie, mission...) affichées mais absentes des tables chargées.
+// Un même jeu d'identifiants introuvables ne déclenche qu'un seul rechargement.
+function referencesManquantes() {
+  const manquantes = [];
+  for (const [cle, s] of Object.entries(structure)) {
+    if (!estMappe(cle) || !indexIds[s.tableId]) continue;
+    for (const id of idsDe(enregistrement[cle])) {
+      if (!indexIds[s.tableId].has(id)) manquantes.push(`${cle}:${id}`);
+    }
+  }
+  const signature = manquantes.join(',');
+  if (!signature) { manquantsTentes = ''; return false; }
+  if (signature === manquantsTentes) return false;
+  manquantsTentes = signature;
+  return true;
+}
+
+// Garantit que structure ET contenu des tables liées sont prêts avant tout rendu.
+// Chaque appel attend le chargement en cours : une réponse n'est jamais affichée
+// avec des tables encore vides (ce qui montrerait des « #id » à la place des libellés).
 async function preparerReferences(rafraichir) {
   const signature = JSON.stringify(mappingsGrist);
   if (signature !== signatureStructure) {
     signatureStructure = signature;
+    donneesChargees = false;
     promesseStructure = chargerStructure(mappingsGrist);
-    rafraichir = true;
   }
   await promesseStructure;
-  if (rafraichir) await chargerDonneesGroupe();
+
+  if (rafraichir || !donneesChargees) await chargerDonneesGroupe();
+  else if (chargementDonnees) await chargementDonnees;
+
+  if (referencesManquantes()) await chargerDonneesGroupe();
 }
 
 function cellule(tableId, colonne, id) {
@@ -455,9 +503,30 @@ function lireRef(cle, brut) {
   return id ? [id] : [];
 }
 
+function normaliserRetombee(r) {
+  return { nom: String(r?.nom ?? ''), type: String(r?.type ?? ''), lien: String(r?.lien ?? '') };
+}
+
+function lireRetombees(rec) {
+  const brut = texte(rec.retombee);
+  if (!brut) return { liste: [], valide: true };
+  try {
+    const valeur = JSON.parse(brut);
+    if (Array.isArray(valeur)) return { liste: valeur.map(normaliserRetombee), valide: true };
+  } catch { /* contenu invalide */ }
+  return { liste: [], valide: false };
+}
+
+// Retombées nettoyées : espaces retirés, lignes entièrement vides supprimées.
+const retombeesNettoyees = (liste) => liste
+  .map((r) => ({ nom: r.nom.trim(), type: r.type.trim(), lien: r.lien.trim() }))
+  .filter((r) => r.nom || r.type || r.lien);
+
 function extraireValeurs(rec) {
   const etapes = lireEtapes(rec);
   etapesValides = etapes.valide;
+  const retombees = lireRetombees(rec);
+  retombeesValides = retombees.valide;
   return {
     statut: texte(rec.statut),
     responsable: texte(rec.responsable),
@@ -471,6 +540,7 @@ function extraireValeurs(rec) {
     lien_ressource: texte(rec.lien_ressource),
     lien_article_presse: texte(rec.lien_article_presse),
     etapes: trierEtapes(etapes.liste),
+    retombee: retombees.liste,
   };
 }
 
@@ -480,6 +550,7 @@ function modifiable(cle) {
   if (!estMappe(cle)) return false;
   if (COLONNES_REFERENCES.includes(cle)) return Boolean(structure[cle]);
   if (cle === 'etapes') return etapesValides;
+  if (cle === 'retombee') return retombeesValides;
   return true;
 }
 
@@ -489,6 +560,7 @@ function encoder(cle, valeur) {
     return structure[cle]?.multiple ? ['L', ...valeur] : (valeur[0] || 0);
   }
   if (cle === 'etapes') return JSON.stringify(valeur);
+  if (cle === 'retombee') return JSON.stringify(retombeesNettoyees(valeur));
   return typeof valeur === 'string' ? valeur.trim() : valeur;
 }
 
@@ -572,7 +644,7 @@ function fusionnerExterne() {
   }
   original = nouvelles;
 
-  const lecture = JSON.stringify([enregistrement.titre, enregistrement.echeance]);
+  const lecture = JSON.stringify([enregistrement.titre, enregistrement.echeance, enregistrement.maj_temp, enregistrement.maj_par]);
   if (lecture !== derniereLecture) change = true;
   if (change) rendrePreservantFocus();
 }
@@ -605,6 +677,7 @@ function rendre(focusId) {
     h('div', { class: 'corps' },
       h('div', { class: 'colonne' }, blocDescriptif(v), blocEtapes(v)),
       h('div', { class: 'colonne' }, blocMissions(v), blocPersonnes(v), blocLiens(v))),
+    blocRetombees(v),
   );
 
   const champTexte = document.getElementById('nouvelle-etape-texte');
@@ -614,7 +687,7 @@ function rendre(focusId) {
   }
 
   derniereSignature = signatureCourante();
-  derniereLecture = JSON.stringify([enregistrement.titre, enregistrement.echeance]);
+  derniereLecture = JSON.stringify([enregistrement.titre, enregistrement.echeance, enregistrement.maj_temp, enregistrement.maj_par]);
   majFrise(animerFrise);
   animerFrise = false;
   window.scrollTo(0, defilement);
@@ -675,15 +748,15 @@ function construireEntete(v) {
 
 function rubriquesVue(v) {
   const lignes = [];
-  for (const [cle, singulier, pluriel] of [
-    ['categorie', 'Catégorie', 'Catégories'],
-    ['sous_categorie', 'Sous-catégorie', 'Sous-catégories'],
+  for (const [cle, libelle] of [
+    ['categorie', 'Catégorie(s)'],
+    ['sous_categorie', 'Sous-catégorie(s)'],
   ]) {
     if (!estMappe(cle)) continue;
     const libelles = libellesAffiches(cle, v);
     if (!libelles.length) continue;
     lignes.push(h('div', { class: 'rubrique' },
-      h('span', { class: 'rubrique-libelle' }, libelles.length > 1 ? pluriel : singulier),
+      h('span', { class: 'rubrique-libelle' }, libelle),
       h('div', { class: 'puces' }, ...libelles.map((l) => h('p', { class: 'fr-tag' }, l)))));
   }
   return lignes.length
@@ -696,8 +769,8 @@ function rubriquesEdition(v) {
 
   if (estMappe('categorie')) {
     champs.push(modifiable('categorie')
-      ? champReference('categorie', v, optionsRef('categorie'), { singulier: 'Catégorie', pluriel: 'Catégories' })
-      : champLecture('Catégorie', libellesAffiches('categorie', v).join(', ')));
+      ? champReference('categorie', v, optionsRef('categorie'), { singulier: 'Catégorie(s)', pluriel: 'Catégorie(s)' })
+      : champLecture('Catégorie(s)', libellesAffiches('categorie', v).join(', ')));
   }
 
   if (estMappe('sous_categorie')) {
@@ -711,10 +784,10 @@ function rubriquesEdition(v) {
         aide = 'Aucun lien trouvé avec les catégories : toutes les sous-catégories sont proposées';
       }
       champs.push(champReference('sous_categorie', v, optionsSousCategorie(v.categorie), {
-        singulier: 'Sous-catégorie', pluriel: 'Sous-catégories', desactive, aide,
+        singulier: 'Sous-catégorie(s)', pluriel: 'Sous-catégorie(s)', desactive, aide,
       }));
     } else {
-      champs.push(champLecture('Sous-catégorie', libellesAffiches('sous_categorie', v).join(', ')));
+      champs.push(champLecture('Sous-catégorie(s)', libellesAffiches('sous_categorie', v).join(', ')));
     }
   }
   return h('div', { class: 'rubriques-edition' }, ...champs);
@@ -734,37 +807,73 @@ function blocEcheance(v) {
 }
 
 function blocStatut(v) {
-  if (!estMappe('statut')) return null;
+  // Le bloc reste toujours visible : si la colonne n'est pas associée, on l'indique.
+  if (!estMappe('statut')) {
+    return h('div', { class: 'statut' },
+      h('p', { class: 'meta-libelle' }, 'Statut'),
+      h('p', { class: 'vide' }, 'Colonne « Statut » non associée'));
+  }
+  const officiel = statutOfficiel(v.statut);
   if (!enEdition) {
-    const configuration = STATUTS[v.statut];
+    const configuration = STATUTS[officiel];
     return h('div', { class: 'statut' },
       h('p', { class: 'meta-libelle' }, 'Statut'),
       h('p', { class: `fr-badge fr-badge--no-icon ${configuration?.badge ?? 'fr-badge--info'}` },
-        v.statut || 'Non renseigné'));
+        officiel || v.statut || 'Non renseigné'));
   }
+  // Valeur existante non reconnue : proposée telle quelle pour ne pas la perdre.
+  const choix = Object.entries(STATUTS).map(([valeur, c]) => [valeur, c.theme]);
+  if (v.statut && !officiel) choix.push([v.statut, 'neutre']);
   return h('div', { class: 'statut' },
     h('p', { class: 'meta-libelle', id: 'libelle-statut' }, 'Statut'),
     h('div', { class: 'pastilles', role: 'radiogroup', 'aria-labelledby': 'libelle-statut' },
-      ...Object.entries(STATUTS).map(([valeur, configuration], i) => h('label', { class: `pastille theme-${configuration.theme}` },
+      ...choix.map(([valeur, theme], i) => h('label', { class: `pastille theme-${theme}` },
         h('input', {
           type: 'radio',
           name: 'statut',
           id: `statut-${i}`,
           value: valeur,
-          checked: v.statut === valeur,
+          checked: officiel ? officiel === valeur : v.statut === valeur,
           onchange: () => { brouillon.statut = valeur; rendre(`statut-${i}`); },
         }),
         h('span', {}, valeur)))));
 }
 
 function blocResponsable(v) {
-  if (!estMappe('responsable')) return null;
-  if (!enEdition) {
-    return h('div', { class: 'responsable-bloc' },
-      h('p', { class: 'meta-libelle' }, 'Responsable du projet'),
-      h('p', { class: 'responsable' }, icone('user-line'), v.responsable || 'Non renseigné'));
+  const elements = [];
+  if (estMappe('responsable')) {
+    elements.push(enEdition
+      ? champTexte('responsable', 'Responsable du projet', v)
+      : h('div', { class: 'responsable-bloc' },
+        h('p', { class: 'meta-libelle' }, 'Responsable du projet'),
+        h('p', { class: 'responsable' }, icone('user-line'), v.responsable || 'Non renseigné')));
   }
-  return champTexte('responsable', 'Responsable du projet', v);
+  elements.push(derniereEdition());
+  const contenu = elements.filter(Boolean);
+  return contenu.length ? h('div', { class: 'responsable-groupe' }, ...contenu) : null;
+}
+
+// « 27 octobre 2026 » ou « 27 octobre 2026 à 14:32 » selon que la valeur porte une heure.
+function formaterDateHeure(valeur) {
+  const brut = dechiffrer(valeur);
+  const date = versDate(valeur);
+  if (!date) return typeof brut === 'string' ? brut : '';
+  const dateSeule = typeof brut === 'number' && brut % 86400 === 0;
+  if (dateSeule) return formaterDate(date);
+  return `${date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`
+    + ` à ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+// « Dernière édition le (maj_temp) par (maj_par) », en lecture seule.
+function derniereEdition() {
+  if (!estMappe('maj_temp') && !estMappe('maj_par')) return null;
+  const quand = estMappe('maj_temp') ? formaterDateHeure(enregistrement.maj_temp) : '';
+  const qui = estMappe('maj_par') ? texte(enregistrement.maj_par).trim() : '';
+  let phrase = 'Dernière édition : non renseignée';
+  if (quand || qui) {
+    phrase = 'Dernière édition' + (quand ? ` le ${quand}` : '') + (qui ? ` par ${qui}` : '');
+  }
+  return h('p', { class: 'derniere-edition' }, phrase);
 }
 
 // ----- Blocs de contenu -----
@@ -793,9 +902,9 @@ function blocMissions(v) {
   const cle = 'missions_fondatrices_rattachees';
   if (!estMappe(cle)) return null;
   const contenu = enEdition && modifiable(cle)
-    ? champReference(cle, v, optionsRef(cle), { singulier: 'Mission', pluriel: 'Ajouter une mission' })
+    ? champReference(cle, v, optionsRef(cle), { singulier: 'Mission(s) fondatrice(s) rattachée(s)', pluriel: 'Mission(s) fondatrice(s) rattachée(s)' })
     : listePuces(libellesAffiches(cle, v), 'Aucune mission rattachée.');
-  return h('section', { class: 'bloc' }, h('h2', { class: 'bloc-titre' }, 'Missions fondatrices rattachées'), contenu);
+  return h('section', { class: 'bloc' }, h('h2', { class: 'bloc-titre' }, 'Mission(s) fondatrice(s) rattachée(s)'), contenu);
 }
 
 function blocPersonnes(v) {
@@ -852,6 +961,117 @@ function blocLiens(v) {
       }
       return champVue(libelle, contenu);
     }));
+}
+
+// ----- Retombées médiatiques -----
+
+// Lien exploitable (https:// ajouté si l'adresse est saisie sans protocole) ou null.
+function adresseLien(lien) {
+  const texteLien = lien.trim();
+  if (/^https?:\/\//i.test(texteLien)) return texteLien;
+  if (/^(www\.)?[\w-]+(\.[\w-]+)+(\/\S*)?$/i.test(texteLien)) return `https://${texteLien}`;
+  return null;
+}
+
+function blocRetombees(v) {
+  if (!estMappe('retombee')) return null;
+  const liste = v.retombee;
+
+  let corps;
+  if (!retombeesValides) {
+    corps = h('p', { class: 'vide' }, 'La colonne des retombées ne contient pas un tableau JSON valide : affichage et modification désactivés.');
+  } else if (enEdition) {
+    corps = tableRetombeesEdition(liste);
+  } else if (!liste.length) {
+    corps = h('p', { class: 'vide' }, 'Aucune retombée médiatique référencée.');
+  } else {
+    corps = tableRetombeesVue(liste);
+  }
+
+  const entete = h('div', { class: 'bloc-entete' },
+    h('h2', { class: 'bloc-titre' }, 'Retombées médiatiques'),
+    !enEdition && liste.length
+      ? h('p', { class: 'progression' }, `${liste.length} référence${liste.length > 1 ? 's' : ''}`)
+      : null);
+  return h('section', { class: 'bloc bloc-large' }, entete, corps);
+}
+
+function tableRetombeesVue(liste) {
+  return h('div', { class: 'tableau-defilant' },
+    h('table', { class: 'retombees' },
+      h('thead', {}, h('tr', {},
+        h('th', { scope: 'col' }, 'Nom'),
+        h('th', { scope: 'col' }, 'Type'),
+        h('th', { scope: 'col' }, 'Lien'))),
+      h('tbody', {}, ...liste.map((r) => {
+        const adresse = adresseLien(r.lien);
+        let cellule = h('span', { class: 'vide' }, '—');
+        if (adresse) {
+          cellule = h('a', {
+            class: 'fr-link',
+            href: adresse,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            title: adresse,
+          }, 'Lien');
+        } else if (r.lien) {
+          cellule = h('span', {}, r.lien);
+        }
+        return h('tr', {},
+          h('td', {}, r.nom || h('span', { class: 'vide' }, '—')),
+          h('td', {}, r.type ? h('span', { class: 'fr-tag fr-tag--sm' }, r.type) : h('span', { class: 'vide' }, '—')),
+          h('td', {}, cellule));
+      }))));
+}
+
+function tableRetombeesEdition(liste) {
+  const types = [...new Set([...TYPES_RETOMBEES, ...liste.map((r) => r.type.trim()).filter(Boolean)])];
+  const suggestions = h('datalist', { id: 'types-retombees' }, ...types.map((t) => h('option', { value: t })));
+
+  const champ = (i, cle, libelle, props = {}) => {
+    const saisie = h('input', {
+      type: 'text',
+      class: 'fr-input',
+      id: `retombee-${cle}-${i}`,
+      'aria-label': `${libelle} (retombée ${i + 1})`,
+      value: liste[i][cle],
+      oninput: (e) => { brouillon.retombee[i][cle] = e.target.value; },
+      ...props,
+    });
+    if (cle === 'type') saisie.setAttribute('list', 'types-retombees');
+    return saisie;
+  };
+
+  const lignes = liste.map((_, i) => h('div', { class: 'retombee-edition' },
+    champ(i, 'nom', 'Nom', { placeholder: 'Nom (ex. Le Monde, France Inter…)' }),
+    champ(i, 'type', 'Type', { placeholder: 'Type' }),
+    champ(i, 'lien', 'Lien', { type: 'url', placeholder: 'https://…' }),
+    h('button', {
+      type: 'button',
+      class: 'fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-icon-delete-line',
+      title: 'Supprimer cette retombée',
+      onclick: () => { brouillon.retombee.splice(i, 1); rendre(); },
+    }, 'Supprimer cette retombée')));
+
+  const ajouter = h('button', {
+    type: 'button',
+    class: 'fr-btn fr-btn--secondary fr-btn--sm fr-icon-add-line fr-btn--icon-left',
+    id: 'retombee-ajouter',
+    onclick: () => {
+      brouillon.retombee.push({ nom: '', type: '', lien: '' });
+      rendre(`retombee-nom-${brouillon.retombee.length - 1}`);
+    },
+  }, 'Ajouter');
+
+  return h('div', {},
+    suggestions,
+    liste.length
+      ? h('div', { class: 'retombees-edition' },
+        h('div', { class: 'retombee-edition retombee-entete', 'aria-hidden': 'true' },
+          h('span', {}, 'Nom'), h('span', {}, 'Type'), h('span', {}, 'Lien'), h('span', {})),
+        ...lignes)
+      : h('p', { class: 'vide' }, 'Aucune retombée pour le moment : cliquez sur « Ajouter ».'),
+    h('div', { class: 'ajout-retombee' }, ajouter));
 }
 
 // ----- Frise chronologique -----
