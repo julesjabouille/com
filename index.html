@@ -1,457 +1,180 @@
-<!doctype html>
-<html lang="fr">
+<!DOCTYPE html>
+<html lang="fr" data-fr-scheme="light">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Fiche projet — Grist</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projet ARIANE</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.15.4/dist/dsfr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.15.4/dist/utility/icons/icons-system/icons-system.min.css">
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
   <style>
-    :root { color-scheme: light; --ink:#182230; --muted:#667085; --line:#d9e0e8; --blue:#175cd3; --blue-bg:#eff8ff; --bg:#f6f8fb; --danger:#b42318; }
-    * { box-sizing:border-box; }
-    body { margin:0; padding:22px; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-    .shell { max-width:900px; margin:0 auto; }
-    .top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
-    h1 { font-size:22px; margin:0 0 4px; letter-spacing:-.025em; }
-    .subtitle { color:var(--muted); font-size:13px; }
-    .badge { font-size:12px; border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 10px; white-space:nowrap; }
-    .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:0 2px 8px #10182808; }
-    .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
-    .field { min-width:0; }
-    .wide { grid-column:1/-1; }
-    label,.label { display:block; font-weight:650; font-size:13px; margin-bottom:7px; }
-    input[type=text], input[type=date], input[type=search] { width:100%; border:1px solid #cfd7e2; border-radius:9px; padding:10px 11px; font:inherit; color:var(--ink); background:#fff; }
-    input:focus { outline:3px solid #d1e9ff; border-color:#84caff; }
-    .hint { color:var(--muted); font-size:12px; margin-top:5px; }
-    .picker { border:1px solid #cfd7e2; border-radius:10px; overflow:hidden; }
-    .picker-head { padding:9px; border-bottom:1px solid var(--line); background:#fcfcfd; }
-    .picker-head input { border-radius:7px; }
-    .selected { display:flex; flex-wrap:wrap; gap:6px; padding:9px; border-bottom:1px solid var(--line); min-height:43px; }
-    .chip { display:inline-flex; align-items:center; gap:7px; border:1px solid #b2ddff; color:#1849a9; background:var(--blue-bg); border-radius:7px; padding:4px 7px; font-size:12px; max-width:100%; }
-    .chip span { overflow-wrap:anywhere; }
-    .chip button { border:0; background:transparent; color:inherit; font-size:16px; line-height:1; cursor:pointer; padding:0 1px; }
-    .options { max-height:210px; overflow:auto; }
-    .option { display:flex; align-items:flex-start; gap:9px; padding:9px 11px; cursor:pointer; border-bottom:1px solid #f2f4f7; }
-    .option:last-child { border-bottom:0; }
-    .option:hover { background:#f8fafc; }
-    .option input { margin-top:3px; }
-    .option-text { overflow-wrap:anywhere; }
-    .empty { color:var(--muted); font-size:12px; padding:12px; }
-    .actions { display:flex; align-items:center; gap:12px; margin-top:18px; }
-    button.primary { border:0; border-radius:9px; padding:10px 16px; color:#fff; background:var(--blue); font:600 14px system-ui; cursor:pointer; }
-    button.primary:hover { background:#1849a9; }
-    button.primary:disabled { opacity:.5; cursor:not-allowed; }
-    button.secondary { border:1px solid var(--line); border-radius:9px; padding:9px 13px; background:#fff; cursor:pointer; font:600 13px system-ui; }
-    #status { color:var(--muted); font-size:13px; }
-    #status.error { color:var(--danger); }
-    .notice { border-radius:10px; padding:11px 13px; margin-bottom:15px; background:#fffaeb; color:#93370d; border:1px solid #fedf89; font-size:13px; }
-    .hidden { display:none!important; }
-    .loading { color:var(--muted); text-align:center; padding:38px 15px; }
-    @media (max-width:650px) { body { padding:12px; } .grid { grid-template-columns:1fr; } .wide { grid-column:auto; } .card { padding:15px; } .top { flex-direction:column; } }
+    [hidden] { display: none !important; }
+
+    .entete-statut {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      align-items: flex-start;
+    }
+    @media (min-width: 768px) {
+      .entete-statut { align-items: flex-end; }
+    }
+    .entete-statut .fr-select-group { margin-bottom: 0; width: 100%; max-width: 16rem; }
+
+    .champ-lecture .libelle {
+      font-size: 0.875rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .champ-lecture p { margin-bottom: 0; }
+
+    .liste-brute { list-style: none; margin: 0; padding: 0; }
+    .etape {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border-default-grey);
+    }
+    .etape .fr-checkbox-group { margin: 0; flex: 1; }
+    .etape .fr-btn { flex-shrink: 0; }
   </style>
 </head>
 <body>
-<div class="shell">
-  <div class="top">
-    <div>
-      <h1>Fiche projet</h1>
-      <div class="subtitle">Modification directe de la ligne sélectionnée dans Grist</div>
+  <main class="fr-container fr-py-3w">
+
+    <!-- Messages d'état -->
+    <div id="message-vide" class="fr-alert fr-alert--info fr-alert--sm fr-mb-3w">
+      <p>Sélectionnez une ligne de la table pour afficher le projet.</p>
     </div>
-    <div id="rowBadge" class="badge">Aucune ligne sélectionnée</div>
-  </div>
-
-  <div id="notice" class="notice hidden"></div>
-  <div id="loading" class="card loading">En attente de la ligne sélectionnée dans Grist…</div>
-
-  <form id="projectForm" class="card hidden">
-    <div class="grid">
-      <div class="field wide">
-        <label for="titleInput">Titre</label>
-        <input id="titleInput" type="text" autocomplete="off" placeholder="Titre du projet">
-      </div>
-
-      <div class="field">
-        <span class="label">Catégorie</span>
-        <div id="categoriesPicker"></div>
-        <div class="hint">Choisissez une ou plusieurs catégories.</div>
-      </div>
-
-      <div class="field">
-        <span class="label">Sous-catégorie</span>
-        <div id="subcategoriesPicker"></div>
-        <div class="hint">Seules les sous-catégories rattachées aux catégories sélectionnées sont proposées.</div>
-      </div>
-
-      <div class="field wide">
-        <span class="label">Missions fondatrices rattachées</span>
-        <div id="missionsPicker"></div>
-      </div>
-
-      <div class="field">
-        <label for="deadlineInput">Échéance</label>
-        <input id="deadlineInput" type="date">
-        <div class="hint">Saisie par calendrier ; affichage au format français dans Grist selon le format de la colonne.</div>
-      </div>
+    <div id="message-config" class="fr-alert fr-alert--warning fr-alert--sm fr-mb-3w" hidden>
+      <p>Associez les colonnes du widget dans le panneau de droite (colonne « Titre » obligatoire).</p>
+    </div>
+    <div id="message-erreur" class="fr-alert fr-alert--error fr-alert--sm fr-mb-3w" hidden>
+      <p></p>
     </div>
 
-    <div class="actions">
-      <button id="saveButton" class="primary" type="submit">Enregistrer les modifications</button>
-      <button id="reloadButton" class="secondary" type="button">Recharger la ligne</button>
-      <span id="status" role="status" aria-live="polite"></span>
+    <div id="application" hidden>
+
+      <!-- Titre à gauche, statut à droite -->
+      <div class="fr-grid-row fr-grid-row--middle fr-grid-row--gutters">
+        <div class="fr-col-12 fr-col-md-8">
+          <h1 class="fr-h4 fr-mb-0" id="titre"></h1>
+        </div>
+        <div class="fr-col-12 fr-col-md-4 entete-statut">
+          <p class="fr-badge fr-badge--sm fr-badge--no-icon" id="statut-badge"></p>
+          <div class="fr-select-group">
+            <label class="fr-label" for="statut">Statut</label>
+            <select class="fr-select" id="statut"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Responsable -->
+      <div class="fr-input-group fr-mt-3w">
+        <label class="fr-label" for="responsable">Responsable du projet</label>
+        <input class="fr-input" id="responsable" type="text" data-champ="responsable">
+      </div>
+
+      <!-- Catégorie / sous-catégorie (lecture seule) -->
+      <div class="fr-grid-row fr-grid-row--gutters fr-mt-2w">
+        <div class="fr-col-12 fr-col-md-6 champ-lecture">
+          <p class="libelle">Catégorie</p>
+          <p id="categorie"></p>
+        </div>
+        <div class="fr-col-12 fr-col-md-6 champ-lecture">
+          <p class="libelle">Sous-catégorie</p>
+          <p id="sous-categorie"></p>
+        </div>
+      </div>
+
+      <!-- Descriptif -->
+      <div class="fr-input-group fr-mt-3w">
+        <label class="fr-label" for="descriptif">Descriptif du projet</label>
+        <textarea class="fr-input" id="descriptif" rows="5" data-champ="descriptif"></textarea>
+      </div>
+
+      <hr class="fr-hr fr-mt-3w">
+
+      <!-- Missions / échéance (lecture seule) -->
+      <div class="fr-grid-row fr-grid-row--gutters">
+        <div class="fr-col-12 fr-col-md-8 champ-lecture">
+          <p class="libelle">Missions fondatrices rattachées</p>
+          <p id="missions"></p>
+        </div>
+        <div class="fr-col-12 fr-col-md-4 champ-lecture">
+          <p class="libelle">Échéance</p>
+          <p id="echeance"></p>
+        </div>
+      </div>
+
+      <hr class="fr-hr fr-mt-3w">
+
+      <!-- Agents ARIANE : liste déroulante à sélection multiple -->
+      <div class="fr-select-group">
+        <label class="fr-label" for="agents-select">
+          Agents ARIANE concernés
+          <span class="fr-hint-text">Sélectionnez un ou plusieurs agents dans la liste</span>
+        </label>
+        <select class="fr-select" id="agents-select"></select>
+      </div>
+      <div class="fr-tags-group fr-mt-1w" id="agents-tags"></div>
+
+      <!-- Autres agents / interlocuteurs -->
+      <div class="fr-input-group fr-mt-3w">
+        <label class="fr-label" for="autres-agents">Autres agents concernés</label>
+        <input class="fr-input" id="autres-agents" type="text" data-champ="autres_agents">
+      </div>
+      <div class="fr-input-group">
+        <label class="fr-label" for="autres-interlocuteurs">Autres interlocuteurs concernés</label>
+        <input class="fr-input" id="autres-interlocuteurs" type="text" data-champ="autres_interlocuteurs">
+      </div>
+
+      <!-- Liens -->
+      <div class="fr-input-group">
+        <label class="fr-label" for="lien-ressource">Lien ressource</label>
+        <input class="fr-input" id="lien-ressource" type="url" placeholder="https://…" data-champ="lien_ressource">
+        <p class="fr-mt-1v fr-mb-0">
+          <a class="fr-link fr-icon-external-link-line fr-link--icon-right" id="lien-ressource-ouvrir"
+             target="_blank" rel="noopener noreferrer" hidden></a>
+        </p>
+      </div>
+      <div class="fr-input-group">
+        <label class="fr-label" for="lien-article">Lien vers l'article de presse</label>
+        <input class="fr-input" id="lien-article" type="url" placeholder="https://…" data-champ="lien_article_presse">
+        <p class="fr-mt-1v fr-mb-0">
+          <a class="fr-link fr-icon-external-link-line fr-link--icon-right" id="lien-article-ouvrir"
+             target="_blank" rel="noopener noreferrer" hidden></a>
+        </p>
+      </div>
+
+      <hr class="fr-hr fr-mt-3w">
+
+      <!-- Étapes -->
+      <h2 class="fr-h6">Étapes</h2>
+      <form id="etape-form" class="fr-grid-row fr-grid-row--gutters fr-grid-row--bottom">
+        <div class="fr-col-12 fr-col-md-6">
+          <div class="fr-input-group fr-mb-0">
+            <label class="fr-label" for="etape-texte">Étape</label>
+            <input class="fr-input" id="etape-texte" type="text" required>
+          </div>
+        </div>
+        <div class="fr-col-12 fr-col-md-3">
+          <div class="fr-input-group fr-mb-0">
+            <label class="fr-label" for="etape-date">Date de réalisation</label>
+            <input class="fr-input" id="etape-date" type="date">
+          </div>
+        </div>
+        <div class="fr-col-12 fr-col-md-3">
+          <button class="fr-btn fr-btn--secondary fr-icon-add-line fr-btn--icon-left" type="submit">Ajouter l'étape</button>
+        </div>
+      </form>
+      <ul class="liste-brute fr-mt-2w" id="etapes-liste"></ul>
+
     </div>
-  </form>
-</div>
+  </main>
 
-<script>
-/*
- * CONFIGURATION À VÉRIFIER :
- * Les clés ci-dessous sont les identifiants techniques (Column IDs) des colonnes,
- * pas nécessairement leurs libellés visibles. Si l'ID diffère, modifiez-le ici.
- */
-const CFG = {
-  mainTable: "Suivi_projets",
-  columns: {
-    title: "Titre",
-    categories: "Catégorie",
-    subcategories: "Sous_catégorie",
-    missions: "Missions fondatrices rattachées",
-    deadline: "Echeances"
-  },
-  referenceTables: {
-    categories: { table: "REF_categories", label: "Catégories" },
-    subcategories: { table: "REF_sous_categories", label: "Sous-catégorie" },
-    missions: { table: "REF_missions_fondatrices", label: "Abrégé" }
-  },
-  // ID de la colonne dans REF_sous-categories qui référence REF_catégories.
-  // À adapter si le nom technique de cette colonne est différent.
-  subcategoryParentColumn: "Catégories"
-};
-
-let currentRowId = null;
-let currentRecord = null;
-let referenceData = { categories: [], subcategories: [], missions: [] };
-let selected = { categories: new Set(), subcategories: new Set(), missions: new Set() };
-let dirty = false;
-let loadingRecord = false;
-let saveInProgress = false;
-
-const $ = id => document.getElementById(id);
-const form = $("projectForm");
-const statusEl = $("status");
-const saveButton = $("saveButton");
-
-function setStatus(message, error = false) {
-  statusEl.textContent = message || "";
-  statusEl.classList.toggle("error", !!error);
-}
-function showNotice(message) {
-  $("notice").textContent = message;
-  $("notice").classList.remove("hidden");
-}
-function hideNotice() { $("notice").classList.add("hidden"); }
-
-function decodeRefList(value) {
-  if (value == null || value === "") return [];
-  if (Array.isArray(value)) {
-    if (value[0] === "L") return value.slice(1).map(Number).filter(Number.isFinite);
-    return value.map(Number).filter(Number.isFinite);
-  }
-  if (typeof value === "number") return [value];
-  return [];
-}
-function encodeRefList(ids) {
-  // Format interne Grist d'une Reference List.
-  return ["L", ...Array.from(ids).map(Number)];
-}
-function normalizeCell(value) {
-  if (Array.isArray(value) && value[0] === "L") return value.slice(1);
-  return value;
-}
-function rowsFromTable(tableData) {
-  // fetchTable renvoie un objet columnar : {id:[...], Colonne:[...]}.
-  if (!tableData || !Array.isArray(tableData.id)) return [];
-  const ids = tableData.id;
-  return ids.map((id, index) => {
-    const row = { id };
-    for (const [key, values] of Object.entries(tableData)) {
-      if (key !== "id" && Array.isArray(values)) row[key] = values[index];
-    }
-    return row;
-  });
-}
-function getCell(record, columnId) {
-  return record ? record[columnId] : undefined;
-}
-function getLabel(row, tableConfig) {
-  const value = row[tableConfig.label];
-  return value == null || value === "" ? `(ligne ${row.id})` : String(value);
-}
-function asDateInput(value) {
-  if (!value) return "";
-  if (typeof value === "number") {
-    // Grist dates are generally Unix timestamps in seconds.
-    const d = new Date(value * 1000);
-    if (!Number.isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-  }
-  const s = String(value);
-  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-  const fr = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (fr) return `${fr[3]}-${fr[2]}-${fr[1]}`;
-  const d = new Date(s);
-  if (!Number.isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-  return "";
-}
-function dateForGrist(value) {
-  if (!value) return null;
-  // Grist Date columns use Unix timestamps in seconds.
-  return Math.floor(new Date(`${value}T12:00:00`).getTime() / 1000);
-}
-function setDirty() {
-  if (!loadingRecord) {
-    dirty = true;
-    saveButton.disabled = false;
-    setStatus("Modifications non enregistrées");
-  }
-}
-
-function makePicker(containerId, key, optionsGetter, onChange) {
-  const container = $(containerId);
-  container.innerHTML = `
-    <div class="picker">
-      <div class="picker-head"><input type="search" aria-label="Rechercher" placeholder="Rechercher…" autocomplete="off"></div>
-      <div class="selected"></div>
-      <div class="options"></div>
-    </div>`;
-  const search = container.querySelector('input[type="search"]');
-  const selectedBox = container.querySelector(".selected");
-  const optionsBox = container.querySelector(".options");
-
-  function render() {
-    const options = optionsGetter();
-    const selectedIds = selected[key];
-    selectedBox.innerHTML = "";
-    const selectedOptions = options.filter(row => selectedIds.has(Number(row.id)));
-    // Show selected references even if they are no longer eligible, so users can remove them.
-    const allRows = referenceData[key];
-    for (const id of selectedIds) {
-      const row = allRows.find(r => Number(r.id) === Number(id));
-      const label = row ? getLabel(row, CFG.referenceTables[key]) : `(référence ${id})`;
-      const chip = document.createElement("span");
-      chip.className = "chip";
-      const text = document.createElement("span"); text.textContent = label;
-      const remove = document.createElement("button");
-      remove.type = "button"; remove.setAttribute("aria-label", `Retirer ${label}`); remove.textContent = "×";
-      remove.addEventListener("click", () => {
-        selected[key].delete(Number(id));
-        onChange();
-        setDirty();
-        render();
-      });
-      chip.append(text, remove); selectedBox.append(chip);
-    }
-    if (!selectedIds.size) {
-      const empty = document.createElement("span");
-      empty.className = "empty"; empty.textContent = "Aucune référence sélectionnée";
-      selectedBox.append(empty);
-    }
-    const query = search.value.trim().toLocaleLowerCase("fr");
-    const filtered = options.filter(row => getLabel(row, CFG.referenceTables[key]).toLocaleLowerCase("fr").includes(query));
-    optionsBox.innerHTML = "";
-    if (!filtered.length) {
-      const empty = document.createElement("div"); empty.className = "empty";
-      empty.textContent = options.length ? "Aucun résultat pour cette recherche." : "Aucune option disponible.";
-      optionsBox.append(empty);
-    }
-    for (const row of filtered) {
-      const id = Number(row.id);
-      const label = getLabel(row, CFG.referenceTables[key]);
-      const labelEl = document.createElement("label"); labelEl.className = "option";
-      const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = selectedIds.has(id);
-      checkbox.addEventListener("change", () => {
-        if (checkbox.checked) selected[key].add(id); else selected[key].delete(id);
-        onChange();
-        setDirty();
-        render();
-      });
-      const text = document.createElement("span"); text.className = "option-text"; text.textContent = label;
-      labelEl.append(checkbox, text); optionsBox.append(labelEl);
-    }
-  }
-  search.addEventListener("input", render);
-  return { render };
-}
-
-let categoryPicker, subcategoryPicker, missionPicker;
-function eligibleSubcategories() {
-  const categoryIds = selected.categories;
-  const parentCol = CFG.subcategoryParentColumn;
-  // If no category is selected, do not offer any new subcategory.
-  if (!categoryIds.size) return [];
-  return referenceData.subcategories.filter(row => {
-    const parentIds = decodeRefList(row[parentCol]);
-    return parentIds.some(id => categoryIds.has(Number(id)));
-  });
-}
-function refreshPickers() {
-  if (categoryPicker) categoryPicker.render();
-  if (subcategoryPicker) subcategoryPicker.render();
-  if (missionPicker) missionPicker.render();
-}
-function initPickers() {
-  categoryPicker = makePicker("categoriesPicker", "categories", () => referenceData.categories, () => {
-    // Remove subcategory selections that no longer belong to any selected category.
-    const eligible = new Set(eligibleSubcategories().map(r => Number(r.id)));
-    for (const id of [...selected.subcategories]) {
-      if (!eligible.has(Number(id))) selected.subcategories.delete(id);
-    }
-    if (subcategoryPicker) subcategoryPicker.render();
-  });
-  subcategoryPicker = makePicker("subcategoriesPicker", "subcategories", () => {
-    const eligible = eligibleSubcategories();
-    // Keep previously selected but now ineligible items visible as removable chips only.
-    return eligible;
-  }, () => {});
-  missionPicker = makePicker("missionsPicker", "missions", () => referenceData.missions, () => {});
-}
-initPickers();
-
-async function loadReferenceTables() {
-  const names = [
-    ["categories", CFG.referenceTables.categories.table],
-    ["subcategories", CFG.referenceTables.subcategories.table],
-    ["missions", CFG.referenceTables.missions.table]
-  ];
-  for (const [key, tableId] of names) {
-    const data = await grist.docApi.fetchTable(tableId);
-    referenceData[key] = rowsFromTable(data);
-  }
-}
-function renderRecord(record) {
-  loadingRecord = true;
-  currentRecord = record || null;
-  currentRowId = record && Number(record.id) > 0 ? Number(record.id) : null;
-  $("rowBadge").textContent = currentRowId ? `Ligne ${currentRowId}` : "Aucune ligne sélectionnée";
-  if (!record || !currentRowId) {
-    form.classList.add("hidden");
-    $("loading").classList.remove("hidden");
-    $("loading").textContent = "Sélectionnez une ligne dans le tableau suivi_projets.";
-    loadingRecord = false;
-    return;
-  }
-  $("loading").classList.add("hidden");
-  form.classList.remove("hidden");
-  $("titleInput").value = record[CFG.columns.title] == null ? "" : String(record[CFG.columns.title]);
-  $("deadlineInput").value = asDateInput(record[CFG.columns.deadline]);
-  selected.categories = new Set(decodeRefList(record[CFG.columns.categories]));
-  selected.subcategories = new Set(decodeRefList(record[CFG.columns.subcategories]));
-  selected.missions = new Set(decodeRefList(record[CFG.columns.missions]));
-  dirty = false;
-  saveButton.disabled = false;
-  setStatus("");
-  refreshPickers();
-  loadingRecord = false;
-}
-
-async function saveRecord(event) {
-  if (event) event.preventDefault();
-  if (!currentRowId || saveInProgress) return;
-  saveInProgress = true;
-  saveButton.disabled = true;
-  setStatus("Enregistrement…");
-  try {
-  const update = { id: currentRowId };
-
-  update[CFG.columns.title] = $("titleInput").value;
-  update[CFG.columns.categories] = encodeRefList(selected.categories);
-  update[CFG.columns.subcategories] = encodeRefList(selected.subcategories);
-  update[CFG.columns.missions] = encodeRefList(selected.missions);
-  update[CFG.columns.deadline] = dateForGrist($("deadlineInput").value);
-
-  console.log("TABLE :", CFG.mainTable);
-  console.log("UPDATE ENVOYÉ À GRIST :", update);
-
-  const table = await grist.getTable(CFG.mainTable);
-  console.log("TABLE GRIST :", table);
-
-  await table.update([update]);
-
-  console.log("ÉCRITURE OK");
-
-  dirty = false;
-  setStatus("Modifications enregistrées dans Grist.");
-} catch (error) {
-  console.error("ERREUR ENREGISTREMENT :", error);
-  setStatus(`Échec de l’enregistrement : ${error.message || error}`, true);
-  saveButton.disabled = false;
-}
-
-$("titleInput").addEventListener("input", setDirty);
-$("deadlineInput").addEventListener("change", setDirty);
-form.addEventListener("submit", saveRecord);
-$("reloadButton").addEventListener("click", () => {
-  if (currentRecord) renderRecord(currentRecord);
-  setStatus("Valeurs rechargées depuis la dernière ligne reçue.");
-});
-
-grist.ready({ requiredAccess: "full" });
-  // DIAGNOSTIC TEMPORAIRE : afficher les identifiants des tables
-grist.docApi.listTables()
-  .then(tables => {
-    console.log("Tables disponibles dans Grist :", tables);
-
-    document.body.insertAdjacentHTML(
-      "beforeend",
-      `<pre style="background:#fff;padding:12px;border:1px solid #ccc;white-space:pre-wrap;">
-Tables disponibles :
-${JSON.stringify(tables, null, 2)}
-</pre>`
-    );
-  })
-  .catch(error => {
-    console.error("Erreur lors de la récupération des tables :", error);
-  });
-(async () => {
-  for (const tableId of [
-    "REF_categories",
-    "REF_sous_categories",
-    "REF_missions_fondatrices"
-  ]) {
-    try {
-      const data = await grist.docApi.fetchTable(tableId);
-      console.log("TABLE :", tableId);
-      console.log("COLONNES :", Object.keys(data));
-      console.log("PREMIERE LIGNE :", data);
-    } catch (e) {
-      console.error("ERREUR", tableId, e);
-    }
-  }
-})();
-grist.onRecord(async (record) => {
-  try {
-    hideNotice();
-    await loadReferenceTables();
-    renderRecord(record);
-  } catch (error) {
-    console.error(error);
-    showNotice(
-      `Impossible de charger les tables de référence. Vérifiez les noms des tables et l’accès complet au document. Détail : ${error.message || error}`
-    );
-  }
-});
-grist.onRecord(async (record) => {
-  try {
-    hideNotice();
-    await loadReferenceTables();
-    renderRecord(record);
-  } catch (error) {
-    console.error(error);
-    showNotice(`Impossible de charger les tables de référence. Vérifiez les noms des tables et l’accès complet au document. Détail : ${error.message || error}`);
-  }
-});
-grist.onRecords((records) => {
-  // L'événement permet à Grist de notifier les changements ; la fiche active est actualisée
-  // à la prochaine sélection de ligne, afin de ne pas écraser une saisie en cours.
-});
-</script>
+  <script src="app.js"></script>
 </body>
 </html>
