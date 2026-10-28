@@ -79,6 +79,37 @@
     .pastille.theme-error input:checked + span   { color: #fff; background: var(--background-action-high-error); }
     .pastille.theme-success input:checked + span { color: #fff; background: var(--background-action-high-success); }
 
+    .pastille.theme-neutre span { color: var(--text-default-grey); border-color: var(--border-default-grey); }
+    .pastille.theme-neutre input:checked + span { color: #fff; background: var(--background-action-high-blue-france); border-color: var(--background-action-high-blue-france); }
+
+    .responsable-groupe { display: flex; flex-direction: column; gap: 0.5rem; }
+    .derniere-edition { margin: 0; font-size: 0.8125rem; color: var(--text-mention-grey); }
+
+    /* ---------- Retombées médiatiques ---------- */
+    .bloc-large { margin-top: 1rem; }
+    .tableau-defilant { overflow-x: auto; }
+    .retombees { width: 100%; border-collapse: collapse; }
+    .retombees th {
+      padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap;
+      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text-mention-grey); background: var(--background-alt-grey);
+      border-bottom: 2px solid var(--border-plain-grey);
+    }
+    .retombees td { padding: 0.6rem 0.75rem; vertical-align: middle; border-bottom: 1px solid var(--border-default-grey); overflow-wrap: anywhere; }
+    .retombees tbody tr:last-child td { border-bottom: 0; }
+    .retombees td:first-child { font-weight: 500; }
+    .retombees .fr-tag { margin: 0; }
+    .retombees-edition { display: flex; flex-direction: column; gap: 0.5rem; }
+    .retombee-edition { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 2fr) auto; gap: 0.5rem; align-items: center; }
+    .retombee-entete { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-mention-grey); }
+    .retombee-entete span:last-child { width: 2.5rem; }
+    .ajout-retombee { margin-top: 1rem; }
+    @media (max-width: 640px) {
+      .retombee-entete { display: none; }
+      .retombee-edition { grid-template-columns: minmax(0, 1fr) auto; padding-bottom: 0.75rem; border-bottom: 1px dashed var(--border-default-grey); }
+      .retombee-edition input:nth-child(2), .retombee-edition input:nth-child(3) { grid-column: 1 / 2; }
+    }
+
     /* ---------- Corps ---------- */
     .corps { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1rem; }
     @media (min-width: 820px) { .corps { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
