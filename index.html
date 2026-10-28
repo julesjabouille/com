@@ -5,174 +5,159 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Projet ARIANE</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.15.4/dist/dsfr.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.15.4/dist/utility/icons/icons-system/icons-system.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.15.4/dist/utility/icons/icons.min.css">
   <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
   <style>
     [hidden] { display: none !important; }
 
-    .entete-statut {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      align-items: flex-start;
-    }
-    @media (min-width: 768px) {
-      .entete-statut { align-items: flex-end; }
-    }
-    .entete-statut .fr-select-group { margin-bottom: 0; width: 100%; max-width: 16rem; }
+    body { background: var(--background-default-grey); }
+    .page { max-width: 1100px; margin: 0 auto; padding: 0 1rem 2rem; }
 
-    .champ-lecture .libelle {
-      font-size: 0.875rem;
-      font-weight: 700;
-      margin-bottom: 0.25rem;
+    /* ---------- Barre d'outils (bouton Éditer en haut à droite) ---------- */
+    .barre {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;
+      padding: 0.6rem 0;
+      background: var(--background-default-grey);
     }
-    .champ-lecture p { margin-bottom: 0; }
-
-    .liste-brute { list-style: none; margin: 0; padding: 0; }
-    .etape {
-      display: flex;
-      align-items: flex-start;
+    .barre.edition {
       justify-content: space-between;
-      gap: 1rem;
-      padding: 0.5rem 0;
+      margin: 0 -1rem; padding: 0.6rem 1rem;
+      background: var(--background-alt-blue-france);
       border-bottom: 1px solid var(--border-default-grey);
     }
-    .etape .fr-checkbox-group { margin: 0; flex: 1; }
-    .etape .fr-btn { flex-shrink: 0; }
+    .barre .consigne { margin: 0; font-size: 0.875rem; font-weight: 500; color: var(--text-action-high-blue-france); }
+    .barre .actions { display: flex; gap: 0.5rem; margin-left: auto; }
+
+    /* ---------- En-tête ---------- */
+    .entete {
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1.5rem;
+      margin-top: 0.5rem; padding: 1.5rem;
+      background: var(--background-alt-blue-france);
+      border-left: 6px solid var(--background-action-high-blue-france);
+    }
+    .entete-gauche { flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 0.9rem; }
+    .entete-gauche h1 { margin: 0; overflow-wrap: anywhere; }
+    .rubriques { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+    .rubriques .separateur { color: var(--text-mention-grey); font-weight: 700; }
+    .rubriques-edition { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0 1rem; }
+
+    .entete-droite { flex: 0 1 290px; display: flex; flex-direction: column; align-items: flex-end; gap: 1rem; text-align: right; }
+    .entete-droite.edition { align-items: stretch; text-align: left; }
+    @media (max-width: 640px) {
+      .entete-droite { flex-basis: 100%; align-items: flex-start; text-align: left; }
+    }
+    .meta-libelle {
+      margin: 0 0 0.2rem; font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-mention-grey);
+    }
+    .echeance-valeur { margin: 0; display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; font-size: 1.2rem; font-weight: 700; }
+    .echeance.retard .echeance-valeur { color: var(--text-default-error); }
+    .responsable { margin: 0; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500; }
+    .entete .fr-badge, .rubriques .fr-tag, .puces .fr-tag { margin: 0; }
+    .entete .fr-input-group, .entete .fr-select-group { margin-bottom: 0; }
+
+    /* Statut : pastilles en édition */
+    .pastilles { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; }
+    .entete-droite.edition .pastilles { justify-content: flex-start; }
+    .pastille { position: relative; cursor: pointer; }
+    .pastille input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+    .pastille span {
+      display: inline-block; padding: 0.3rem 0.85rem; border: 2px solid; border-radius: 1rem;
+      background: var(--background-default-grey); font-size: 0.8125rem; font-weight: 700;
+    }
+    .pastille input:focus-visible + span { outline: 2px solid #0a76f6; outline-offset: 2px; }
+    .pastille.theme-warning span { color: var(--text-default-warning); border-color: var(--background-action-high-warning); }
+    .pastille.theme-error span   { color: var(--text-default-error);   border-color: var(--background-action-high-error); }
+    .pastille.theme-success span { color: var(--text-default-success); border-color: var(--background-action-high-success); }
+    .pastille.theme-warning input:checked + span { color: #fff; background: var(--background-action-high-warning); }
+    .pastille.theme-error input:checked + span   { color: #fff; background: var(--background-action-high-error); }
+    .pastille.theme-success input:checked + span { color: #fff; background: var(--background-action-high-success); }
+
+    /* ---------- Corps ---------- */
+    .corps { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1rem; }
+    @media (min-width: 820px) { .corps { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+    .colonne { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+
+    .bloc {
+      padding: 1rem 1.25rem 1.25rem;
+      background: var(--background-default-grey);
+      border: 1px solid var(--border-default-grey);
+      border-top: 3px solid var(--background-action-high-blue-france);
+    }
+    .bloc-entete { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; margin-bottom: 0.9rem; }
+    .bloc-titre { margin: 0 0 0.9rem; font-size: 1rem; font-weight: 700; color: var(--text-title-grey); }
+    .bloc-entete .bloc-titre { margin: 0; }
+    .progression { margin: 0; font-size: 0.8125rem; color: var(--text-mention-grey); }
+    .vide { margin: 0; font-style: italic; color: var(--text-mention-grey); }
+    .texte-long { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .champ-vue { margin-bottom: 1rem; }
+    .champ-vue:last-child { margin-bottom: 0; }
+    .champ-vue p { margin: 0; overflow-wrap: anywhere; }
+    .champ-vue .meta-libelle { margin-bottom: 0.3rem; }
+    .champ-vue .fr-link { overflow-wrap: anywhere; text-align: left; }
+    .puces { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .bloc .fr-input-group, .bloc .fr-select-group { margin-bottom: 1rem; }
+    .bloc .fr-input-group:last-child { margin-bottom: 0; }
+    .champ-multiple { margin-bottom: 1rem; }
+    .champ-multiple .fr-select-group { margin-bottom: 0.5rem; }
+
+    /* ---------- Frise chronologique ---------- */
+    .frise { position: relative; }
+    .frise-rail {
+      position: absolute; left: 12px; width: 4px; border-radius: 2px;
+      background: var(--border-default-grey);
+    }
+    .frise-remplissage {
+      position: absolute; top: 0; left: 0; width: 100%; height: 0; border-radius: 2px;
+      background: var(--background-action-high-blue-france);
+      transition: height 0.8s ease, background 0.4s;
+    }
+    .frise.complete .frise-remplissage { background: var(--background-action-high-success); }
+    .frise-liste { margin: 0; padding: 0; list-style: none; }
+    .frise-etape { position: relative; display: flex; gap: 1rem; padding-bottom: 1.4rem; }
+    .frise-etape:last-child { padding-bottom: 0; }
+    .noeud {
+      position: relative; z-index: 1; flex: 0 0 28px; box-sizing: border-box; width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border: 3px solid var(--border-default-grey); border-radius: 50%;
+      background: var(--background-default-grey);
+      color: #fff; font-size: 0.8rem; font-weight: 700; line-height: 1;
+      transition: background 0.4s, border-color 0.4s;
+    }
+    .frise-etape.fait .noeud { background: var(--background-action-high-blue-france); border-color: var(--background-action-high-blue-france); }
+    .frise-etape.fait .noeud::after { content: "\2713"; }
+    .frise.complete .frise-etape.fait .noeud { background: var(--background-action-high-success); border-color: var(--background-action-high-success); }
+    label.noeud { cursor: pointer; }
+    .noeud input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+    .noeud:has(input:focus-visible) { outline: 2px solid #0a76f6; outline-offset: 2px; }
+    .frise-contenu { flex: 1; min-width: 0; padding-top: 0.1rem; }
+    .etape-titre { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
+    .frise-etape.fait .etape-titre { font-weight: 700; }
+    .etape-date { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0.2rem 0 0; font-size: 0.8125rem; color: var(--text-mention-grey); }
+    .etape-date.retard { color: var(--text-default-error); font-weight: 700; }
+
+    .etape-edition, .ajout-etape { display: grid; grid-template-columns: minmax(0, 1fr) 9.5rem auto; gap: 0.5rem; align-items: center; }
+    .ajout-etape { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed var(--border-default-grey); }
+    @media (max-width: 560px) {
+      .etape-edition, .ajout-etape { grid-template-columns: minmax(0, 1fr) auto; }
+      .etape-edition input[type=date], .ajout-etape input[type=date] { grid-column: 1 / -1; order: 3; }
+    }
   </style>
 </head>
 <body>
-  <main class="fr-container fr-py-3w">
-
-    <!-- Messages d'état -->
-    <div id="message-vide" class="fr-alert fr-alert--info fr-alert--sm fr-mb-3w">
+  <main class="page">
+    <div id="message-vide" class="fr-alert fr-alert--info fr-alert--sm fr-mt-3w">
       <p>Sélectionnez une ligne de la table pour afficher le projet.</p>
     </div>
-    <div id="message-config" class="fr-alert fr-alert--warning fr-alert--sm fr-mb-3w" hidden>
+    <div id="message-config" class="fr-alert fr-alert--warning fr-alert--sm fr-mt-3w" hidden>
       <p>Associez les colonnes du widget dans le panneau de droite (colonne « Titre » obligatoire).</p>
     </div>
-    <div id="message-erreur" class="fr-alert fr-alert--error fr-alert--sm fr-mb-3w" hidden>
+    <div id="message-erreur" class="fr-alert fr-alert--error fr-alert--sm fr-mt-3w" hidden>
       <p></p>
     </div>
 
-    <div id="application" hidden>
-
-      <!-- Titre à gauche, statut à droite -->
-      <div class="fr-grid-row fr-grid-row--middle fr-grid-row--gutters">
-        <div class="fr-col-12 fr-col-md-8">
-          <h1 class="fr-h4 fr-mb-0" id="titre"></h1>
-        </div>
-        <div class="fr-col-12 fr-col-md-4 entete-statut">
-          <p class="fr-badge fr-badge--sm fr-badge--no-icon" id="statut-badge"></p>
-          <div class="fr-select-group">
-            <label class="fr-label" for="statut">Statut</label>
-            <select class="fr-select" id="statut"></select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Responsable -->
-      <div class="fr-input-group fr-mt-3w">
-        <label class="fr-label" for="responsable">Responsable du projet</label>
-        <input class="fr-input" id="responsable" type="text" data-champ="responsable">
-      </div>
-
-      <!-- Catégorie / sous-catégorie (lecture seule) -->
-      <div class="fr-grid-row fr-grid-row--gutters fr-mt-2w">
-        <div class="fr-col-12 fr-col-md-6 champ-lecture">
-          <p class="libelle">Catégorie</p>
-          <p id="categorie"></p>
-        </div>
-        <div class="fr-col-12 fr-col-md-6 champ-lecture">
-          <p class="libelle">Sous-catégorie</p>
-          <p id="sous-categorie"></p>
-        </div>
-      </div>
-
-      <!-- Descriptif -->
-      <div class="fr-input-group fr-mt-3w">
-        <label class="fr-label" for="descriptif">Descriptif du projet</label>
-        <textarea class="fr-input" id="descriptif" rows="5" data-champ="descriptif"></textarea>
-      </div>
-
-      <hr class="fr-hr fr-mt-3w">
-
-      <!-- Missions / échéance (lecture seule) -->
-      <div class="fr-grid-row fr-grid-row--gutters">
-        <div class="fr-col-12 fr-col-md-8 champ-lecture">
-          <p class="libelle">Missions fondatrices rattachées</p>
-          <p id="missions"></p>
-        </div>
-        <div class="fr-col-12 fr-col-md-4 champ-lecture">
-          <p class="libelle">Échéance</p>
-          <p id="echeance"></p>
-        </div>
-      </div>
-
-      <hr class="fr-hr fr-mt-3w">
-
-      <!-- Agents ARIANE : liste déroulante à sélection multiple -->
-      <div class="fr-select-group">
-        <label class="fr-label" for="agents-select">
-          Agents ARIANE concernés
-          <span class="fr-hint-text">Sélectionnez un ou plusieurs agents dans la liste</span>
-        </label>
-        <select class="fr-select" id="agents-select"></select>
-      </div>
-      <div class="fr-tags-group fr-mt-1w" id="agents-tags"></div>
-
-      <!-- Autres agents / interlocuteurs -->
-      <div class="fr-input-group fr-mt-3w">
-        <label class="fr-label" for="autres-agents">Autres agents concernés</label>
-        <input class="fr-input" id="autres-agents" type="text" data-champ="autres_agents">
-      </div>
-      <div class="fr-input-group">
-        <label class="fr-label" for="autres-interlocuteurs">Autres interlocuteurs concernés</label>
-        <input class="fr-input" id="autres-interlocuteurs" type="text" data-champ="autres_interlocuteurs">
-      </div>
-
-      <!-- Liens -->
-      <div class="fr-input-group">
-        <label class="fr-label" for="lien-ressource">Lien ressource</label>
-        <input class="fr-input" id="lien-ressource" type="url" placeholder="https://…" data-champ="lien_ressource">
-        <p class="fr-mt-1v fr-mb-0">
-          <a class="fr-link fr-icon-external-link-line fr-link--icon-right" id="lien-ressource-ouvrir"
-             target="_blank" rel="noopener noreferrer" hidden></a>
-        </p>
-      </div>
-      <div class="fr-input-group">
-        <label class="fr-label" for="lien-article">Lien vers l'article de presse</label>
-        <input class="fr-input" id="lien-article" type="url" placeholder="https://…" data-champ="lien_article_presse">
-        <p class="fr-mt-1v fr-mb-0">
-          <a class="fr-link fr-icon-external-link-line fr-link--icon-right" id="lien-article-ouvrir"
-             target="_blank" rel="noopener noreferrer" hidden></a>
-        </p>
-      </div>
-
-      <hr class="fr-hr fr-mt-3w">
-
-      <!-- Étapes -->
-      <h2 class="fr-h6">Étapes</h2>
-      <form id="etape-form" class="fr-grid-row fr-grid-row--gutters fr-grid-row--bottom">
-        <div class="fr-col-12 fr-col-md-6">
-          <div class="fr-input-group fr-mb-0">
-            <label class="fr-label" for="etape-texte">Étape</label>
-            <input class="fr-input" id="etape-texte" type="text" required>
-          </div>
-        </div>
-        <div class="fr-col-12 fr-col-md-3">
-          <div class="fr-input-group fr-mb-0">
-            <label class="fr-label" for="etape-date">Date de réalisation</label>
-            <input class="fr-input" id="etape-date" type="date">
-          </div>
-        </div>
-        <div class="fr-col-12 fr-col-md-3">
-          <button class="fr-btn fr-btn--secondary fr-icon-add-line fr-btn--icon-left" type="submit">Ajouter l'étape</button>
-        </div>
-      </form>
-      <ul class="liste-brute fr-mt-2w" id="etapes-liste"></ul>
-
-    </div>
+    <div id="application" hidden></div>
   </main>
 
   <script src="app.js"></script>
