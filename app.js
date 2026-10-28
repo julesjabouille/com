@@ -7,7 +7,7 @@
 // Configuration
 // ---------------------------------------------------------------------------
 
-// Identifiant de la table référencée par « Agents ARIANE concernés ».
+// Identifiant de la table référencée par « Agents ARIANE concernés » (insensible à la casse).
 const TABLE_AGENTS = 'agents';
 
 // Colonne de la table agents affichée dans la liste (null = 1re colonne texte trouvée).
@@ -265,9 +265,23 @@ function remplirAgents(rec) {
   }));
 }
 
+// Trouve l'identifiant réel de la table (Grist est sensible à la casse).
+async function resoudreTableAgents() {
+  const tables = await grist.docApi.listTables();
+  const cible = TABLE_AGENTS.toLowerCase();
+  const trouvee = tables.find((t) => t === TABLE_AGENTS)
+    || tables.find((t) => t.toLowerCase() === cible);
+  if (!trouvee) {
+    throw new Error(`table introuvable. Tables du document : ${tables.join(', ') || '(aucune)'}. `
+      + 'Renseignez le bon identifiant dans TABLE_AGENTS (app.js).');
+  }
+  return trouvee;
+}
+
 async function chargerAgents() {
   try {
-    const brut = await grist.docApi.fetchTable(TABLE_AGENTS);
+    const tableAgents = await resoudreTableAgents();
+    const brut = await grist.docApi.fetchTable(tableAgents);
     const table = versColonnes(brut);
     const ids = table.id || [];
     const colonne = COLONNE_LIBELLE_AGENT
@@ -281,7 +295,7 @@ async function chargerAgents() {
     if (enregistrement) remplir(enregistrement);
   } catch (err) {
     console.error(err);
-    afficherErreur(`Impossible de lire la table « ${TABLE_AGENTS} » : ${err.message || err}`);
+    afficherErreur(`Impossible de lire la table des agents (« ${TABLE_AGENTS} ») : ${err.message || err}`);
   }
 }
 
