@@ -65,7 +65,7 @@ const COLONNES = [
   { name: 'echeance', title: 'Échéance', type: 'Date', optional: true },
   { name: 'statut', title: 'Statut', type: 'Any', optional: true },
   { name: 'agents_ariane', title: 'Agents ARIANE concernés', type: 'Any', optional: true },
-  { name: 'autres_agents', title: 'Autres agents concernés', type: 'Text', optional: true },
+  { name: 'autres_agents', title: 'Interlocuteurs cabinet', type: 'Text', optional: true },
   { name: 'autres_interlocuteurs', title: 'Autres interlocuteurs concernés', type: 'Text', optional: true },
   { name: 'lien_ressource', title: 'Lien ressource', type: 'Text', optional: true },
   { name: 'lien_article_presse', title: "Lien vers l'article de presse", type: 'Text', optional: true },
@@ -925,7 +925,7 @@ function blocPersonnes(v) {
 
   // Champs multilignes : Entrée ajoute une nouvelle ligne dans la même entrée.
   for (const [cle, libelle] of [
-    ['autres_agents', 'Autres agents concernés'],
+    ['autres_agents', 'Interlocuteurs cabinet'],
     ['autres_interlocuteurs', 'Autres interlocuteurs concernés'],
   ]) {
     if (!estMappe(cle)) continue;
