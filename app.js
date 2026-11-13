@@ -18,6 +18,7 @@
 // Valeurs du statut : classe du badge DSFR et thème des pastilles d'édition.
 const STATUTS = {
   'En attente': { badge: 'fr-badge--warning', theme: 'warning' },
+  'En cours': { badge: 'fr-badge--info', theme: 'info' },
   'Annulé': { badge: 'fr-badge--error', theme: 'error' },
   'Terminé': { badge: 'fr-badge--success', theme: 'success' },
 };
